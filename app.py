@@ -202,9 +202,9 @@ st.caption("Téléversez vos fichiers puis explorez : exactitude des ETA, couver
 
 col_u1, col_u2 = st.columns(2)
 with col_u1:
-    acc_file = st.file_uploader("Fichier CSV – **ETA accuracy**", type=['csv'], key='acc', help="Doit contenir notamment: totalPredictions, accurate, early, late, routeID, timePeriod, Time Bucket…")
+    acc_file = st.file_uploader("Fichier CSV – **ETA accuracy**", type=['csv'], key='upload_acc', help="Doit contenir notamment: totalPredictions, accurate, early, late, routeID, timePeriod, Time Bucket…")
 with col_u2:
-    cov_file = st.file_uploader("Fichier CSV – **Couverture temps réel**", type=['csv'], key='cov', help="Doit contenir: scheduledTripStops, countTrackedExplained, countOnFullyMissingTrips, countMissingOther, route, timePeriod…")
+    cov_file = st.file_uploader("Fichier CSV – **Couverture temps réel**", type=['csv'], key='upload_cov', help="Doit contenir: scheduledTripStops, countTrackedExplained, countOnFullyMissingTrips, countMissingOther, route, timePeriod…")
 
 # Chargement
 acc_df = load_accuracy(acc_file) if acc_file is not None else None
@@ -218,7 +218,6 @@ with tab_acc:
     if acc_df is None:
         st.info("➡️ Téléversez un fichier *ETA accuracy* pour activer cette section.")
     else:
-        # Validation minimale
         req_eta = {'totalPredictions','accurate','early','late'}
         if not req_eta.issubset(acc_df.columns):
             st.error(f"Le fichier ETA ne contient pas les colonnes minimales {sorted(req_eta)}. Colonnes présentes: {list(acc_df.columns)}")
@@ -227,19 +226,19 @@ with tab_acc:
         c1,c2,c3,c4,c5 = st.columns(5)
         with c1:
             routes = sorted(acc_df['routeID'].dropna().unique().tolist()) if 'routeID' in acc_df else []
-            f_routes = st.multiselect("Routes", routes)
+            f_routes = st.multiselect("Routes", routes, key='acc_routes')
         with c2:
             per = sorted(acc_df['periode'].dropna().unique().tolist()) if 'periode' in acc_df else []
-            f_per = st.multiselect("Périodes", per)
+            f_per = st.multiselect("Périodes", per, key='acc_per')
         with c3:
             fen = sorted(acc_df['Time_Bucket'].dropna().unique().tolist()) if 'Time_Bucket' in acc_df else []
-            f_fen = st.multiselect("Fenêtres", fen)
+            f_fen = st.multiselect("Fenêtres", fen, key='acc_fen')
         with c4:
             dirs = sorted(acc_df['direction'].dropna().unique().tolist()) if 'direction' in acc_df else []
-            f_dir = st.multiselect("Directions", dirs)
+            f_dir = st.multiselect("Directions", dirs, key='acc_dir')
         with c5:
             providers = sorted(acc_df['provider'].dropna().unique().tolist()) if 'provider' in acc_df else []
-            f_prov = st.multiselect("Providers", providers)
+            f_prov = st.multiselect("Providers", providers, key='acc_prov')
         mask = pd.Series(True, index=acc_df.index)
         if f_routes: mask &= acc_df['routeID'].isin(f_routes)
         if f_per:    mask &= acc_df['periode'].isin(f_per)
@@ -303,13 +302,13 @@ with tab_cov:
         c1,c2 = st.columns(2)
         with c1:
             routes = sorted(cov_df['route'].dropna().unique().tolist()) if 'route' in cov_df else []
-            f_routes = st.multiselect("Routes", routes)
+            f_routes_c = st.multiselect("Routes", routes, key='cov_routes')
         with c2:
             per = sorted(cov_df['periode'].dropna().unique().tolist()) if 'periode' in cov_df else []
-            f_per = st.multiselect("Périodes", per)
+            f_per_c = st.multiselect("Périodes", per, key='cov_per')
         mask = pd.Series(True, index=cov_df.index)
-        if f_routes: mask &= cov_df['route'].isin(f_routes)
-        if f_per:    mask &= cov_df['periode'].isin(f_per)
+        if f_routes_c: mask &= cov_df['route'].isin(f_routes_c)
+        if f_per_c:    mask &= cov_df['periode'].isin(f_per_c)
         cdf = cov_df[mask].copy()
 
         kpi_cards_coverage(cdf)
@@ -326,10 +325,6 @@ with tab_cov:
             st.subheader("Heatmap Couverture – route × période")
             st.plotly_chart(heatmap_cov(cdf, 'route','periode'), use_container_width=True)
 
-        st.subheader("Pareto des manquements")
-        # Pareto charts omitted here to keep code compact; can be re-added if desired
-        # (They were present in previous version.)
-
         st.subheader("Table filtrée (Couverture)")
         st.dataframe(cdf)
 
@@ -338,7 +333,6 @@ with tab_corr:
     if (acc_df is None) or (cov_df is None):
         st.info("➡️ Téléversez les **deux** fichiers pour activer la corrélation.")
     else:
-        # Vérif colonnes minimales
         if not {'routeID','periode','accurate','totalPredictions'}.issubset(acc_df.columns):
             st.warning("Colonnes minimales manquantes côté ETA pour la corrélation.")
         elif not {'route','periode','countTrackedExplained','scheduledTripStops'}.issubset(cov_df.columns):
@@ -366,4 +360,4 @@ with tab_corr:
                     st.metric("Corrélation de Pearson (non pondérée)", f"r = {r:0.3f} (p={p:0.3g})")
 
 st.divider()
-st.caption("© 2025 – Tableau de bord Streamlit – ETA & Couverture RT (v2.1 avec validations & messages explicites)")
+st.caption("© 2025 – Tableau de bord Streamlit – ETA & Couverture RT (v2.2 – clés explicites pour tous les widgets)")
